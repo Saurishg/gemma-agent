@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Gemma 4 Agent — local AI agent with tools.
-Gives Gemma 4 access to: bash, read_file, write_file, web_search, list_dir.
+Local AI Agent — tries Gemma 4, then Qwen3, then falls back to Claude.
+Gives local models access to: bash, read_file, write_file, web_search, list_dir.
 Usage: python3 agent.py "your task here"
+       python3 agent.py --model qwen3:8b "your task here"
        python3 agent.py   (interactive mode)
 """
 import os, sys, json, subprocess, re, requests
@@ -12,6 +13,9 @@ from datetime import datetime
 OLLAMA_URL = "http://localhost:11434/api/chat"
 MODEL      = "gemma4"
 MAX_TURNS  = 20   # max tool call rounds before giving up
+
+# Fallback chain: try each model in order
+MODEL_CHAIN = ["gemma4", "qwen3:8b"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -186,9 +190,9 @@ Use tools whenever needed to complete tasks accurately.
 When running bash commands, you have full access to the server.
 Be concise and focused. Complete the task, then give a clear final answer."""
 
-def chat(messages):
+def chat(messages, model=MODEL):
     payload = {
-        "model": MODEL,
+        "model": model,
         "messages": messages,
         "tools": TOOLS,
         "stream": False,
@@ -198,7 +202,18 @@ def chat(messages):
     r.raise_for_status()
     return r.json()["message"]
 
-def run_agent(task, verbose=True):
+FAIL_PHRASES = ["max turns reached", "unable to", "cannot complete", "i don't have access",
+                "i cannot", "i'm unable", "could not find", "no results found"]
+
+def is_bad_answer(answer):
+    """Return True if the answer looks like a failure."""
+    if not answer or answer.strip() == "":
+        return True
+    low = answer.lower()
+    return any(p in low for p in FAIL_PHRASES)
+
+def run_agent(task, model=MODEL, verbose=True):
+    model_label = model.split(":")[0].capitalize()
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user",   "content": task}
@@ -208,14 +223,14 @@ def run_agent(task, verbose=True):
         if verbose:
             print(f"\n{'─'*50}")
 
-        msg = chat(messages)
+        msg = chat(messages, model=model)
         messages.append(msg)
 
         # No tool calls — final answer
         if not msg.get("tool_calls"):
             answer = msg.get("content", "").strip()
             if verbose:
-                print(f"\n🤖 Gemma 4: {answer}")
+                print(f"\n🤖 {model_label}: {answer}")
             return answer
 
         # Execute each tool call
@@ -244,16 +259,50 @@ def run_agent(task, verbose=True):
                 "name": fn_name
             })
 
-    return "Max turns reached — task may be incomplete."
+    return "FAILED: Max turns reached"
+
+def run_chain(task, verbose=True):
+    """Try each model in MODEL_CHAIN. Return first good answer, else signal Claude fallback."""
+    for model in MODEL_CHAIN:
+        label = model.split(":")[0].capitalize()
+        if verbose:
+            print(f"\n{'='*50}")
+            print(f"▶ Trying {label} ({model})...")
+            print(f"{'='*50}")
+        try:
+            answer = run_agent(task, model=model, verbose=verbose)
+            if not is_bad_answer(answer) and "FAILED" not in answer:
+                return answer, model
+            if verbose:
+                print(f"\n⚠ {label} gave weak/failed answer — trying next model...")
+        except Exception as e:
+            if verbose:
+                print(f"\n❌ {label} error: {e} — trying next model...")
+    # All local models failed
+    return None, None
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        task = " ".join(sys.argv[1:])
-        run_agent(task)
+    args = sys.argv[1:]
+
+    # Parse optional --model flag
+    forced_model = None
+    if "--model" in args:
+        idx = args.index("--model")
+        forced_model = args[idx + 1]
+        args = args[:idx] + args[idx+2:]
+
+    if args:
+        task = " ".join(args)
+        if forced_model:
+            run_agent(task, model=forced_model)
+        else:
+            answer, used_model = run_chain(task)
+            if answer is None:
+                print("\n⚠ All local models failed — hand off to Claude.")
     else:
-        print("🤖 Gemma 4 Agent (type 'exit' to quit)\n")
+        print("🤖 Local AI Agent (Gemma → Qwen → Claude) — type 'exit' to quit\n")
         while True:
             try:
                 task = input("You: ").strip()
@@ -261,7 +310,9 @@ if __name__ == "__main__":
                     break
                 if not task:
                     continue
-                run_agent(task)
+                answer, used_model = run_chain(task)
+                if answer is None:
+                    print("\n⚠ All local models failed — hand off to Claude.")
             except KeyboardInterrupt:
                 print("\nBye!")
                 break
