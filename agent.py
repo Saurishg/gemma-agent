@@ -3,7 +3,7 @@
 Local AI Agent — tries Gemma 4, then Qwen3, then falls back to Claude.
 Gives local models access to: bash, read_file, write_file, web_search, list_dir.
 Usage: python3 agent.py "your task here"
-       python3 agent.py --model qwen3:8b "your task here"
+       python3 agent.py --model qwen3:14b "your task here"
        python3 agent.py   (interactive mode)
 """
 import os, sys, json, subprocess, re, requests
@@ -15,7 +15,7 @@ MODEL      = "gemma4"
 MAX_TURNS  = 20   # max tool call rounds before giving up
 
 # Fallback chain: try each model in order
-MODEL_CHAIN = ["gemma4", "qwen3:8b"]
+MODEL_CHAIN = ["gemma4", "qwen3:14b"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
