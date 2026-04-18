@@ -1,0 +1,286 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "agent.py",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L1",
+      "id": "home_work_gemma_agent_agent_py",
+      "community": 0,
+      "norm_label": "agent.py"
+    },
+    {
+      "label": "run_bash()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L100",
+      "id": "agent_run_bash",
+      "community": 0,
+      "norm_label": "run_bash()"
+    },
+    {
+      "label": "run_read_file()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L116",
+      "id": "agent_run_read_file",
+      "community": 0,
+      "norm_label": "run_read_file()"
+    },
+    {
+      "label": "run_write_file()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L127",
+      "id": "agent_run_write_file",
+      "community": 0,
+      "norm_label": "run_write_file()"
+    },
+    {
+      "label": "run_list_dir()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L136",
+      "id": "agent_run_list_dir",
+      "community": 0,
+      "norm_label": "run_list_dir()"
+    },
+    {
+      "label": "run_web_search()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L153",
+      "id": "agent_run_web_search",
+      "community": 0,
+      "norm_label": "run_web_search()"
+    },
+    {
+      "label": "chat()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L195",
+      "id": "agent_chat",
+      "community": 2,
+      "norm_label": "chat()"
+    },
+    {
+      "label": "is_bad_answer()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L210",
+      "id": "agent_is_bad_answer",
+      "community": 1,
+      "norm_label": "is_bad_answer()"
+    },
+    {
+      "label": "run_agent()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L217",
+      "id": "agent_run_agent",
+      "community": 2,
+      "norm_label": "run_agent()"
+    },
+    {
+      "label": "run_chain()",
+      "file_type": "code",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L282",
+      "id": "agent_run_chain",
+      "community": 1,
+      "norm_label": "run_chain()"
+    },
+    {
+      "label": "Return True if the answer looks like a failure.",
+      "file_type": "rationale",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L211",
+      "id": "agent_rationale_211",
+      "community": 1,
+      "norm_label": "return true if the answer looks like a failure."
+    },
+    {
+      "label": "Try each model in MODEL_CHAIN. Return first good answer, else signal Claude fall",
+      "file_type": "rationale",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L283",
+      "id": "agent_rationale_283",
+      "community": 1,
+      "norm_label": "try each model in model_chain. return first good answer, else signal claude fall"
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L100",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_bash",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_bash",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L116",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_read_file",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_read_file",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L127",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_write_file",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_write_file",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_list_dir",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_list_dir",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L153",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_web_search",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_web_search",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L195",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_chat",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_chat",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L210",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_is_bad_answer",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_is_bad_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L217",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_agent",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_agent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L282",
+      "weight": 1.0,
+      "_src": "home_work_gemma_agent_agent_py",
+      "_tgt": "agent_run_chain",
+      "source": "home_work_gemma_agent_agent_py",
+      "target": "agent_run_chain",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L228",
+      "weight": 1.0,
+      "_src": "agent_run_agent",
+      "_tgt": "agent_chat",
+      "source": "agent_chat",
+      "target": "agent_run_agent",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L292",
+      "weight": 1.0,
+      "_src": "agent_run_chain",
+      "_tgt": "agent_is_bad_answer",
+      "source": "agent_is_bad_answer",
+      "target": "agent_run_chain",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L211",
+      "weight": 1.0,
+      "_src": "agent_rationale_211",
+      "_tgt": "agent_is_bad_answer",
+      "source": "agent_is_bad_answer",
+      "target": "agent_rationale_211",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L291",
+      "weight": 1.0,
+      "_src": "agent_run_chain",
+      "_tgt": "agent_run_agent",
+      "source": "agent_run_agent",
+      "target": "agent_run_chain",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "/home/work/gemma-agent/agent.py",
+      "source_location": "L283",
+      "weight": 1.0,
+      "_src": "agent_rationale_283",
+      "_tgt": "agent_run_chain",
+      "source": "agent_run_chain",
+      "target": "agent_rationale_283",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}

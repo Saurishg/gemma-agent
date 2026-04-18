@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Local AI Agent — tries Gemma 4, then Qwen3, then falls back to Claude.
+Local AI Agent — tries Llama4, Phi-4, Gemma4, Qwen3, then falls back to Claude.
 Gives local models access to: bash, read_file, write_file, web_search, list_dir.
 Usage: python3 agent.py "your task here"
-       python3 agent.py --model qwen3:14b "your task here"
+       python3 agent.py --model phi4 "your task here"
        python3 agent.py   (interactive mode)
 """
 import os, sys, json, subprocess, re, requests
@@ -11,11 +11,11 @@ from pathlib import Path
 from datetime import datetime
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL      = "gemma4"
+MODEL      = "llama4"
 MAX_TURNS  = 20   # max tool call rounds before giving up
 
 # Fallback chain: try each model in order
-MODEL_CHAIN = ["gemma4", "qwen3:14b"]
+MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -174,9 +174,9 @@ def run_web_search(query, max_results=5):
         return f"Search error: {e}"
 
 EXECUTORS = {
-    "bash":       lambda args: run_bash(args["command"], args.get("timeout", 30)),
+    "bash":       lambda args: run_bash(args["command"], args.get("timeout", 60)),
     "read_file":  lambda args: run_read_file(args["path"]),
-    "write_file": lambda args: run_write_file(args["path"], args["content"]),
+    "write_file": lambda args: run_write_file(args.get("path", "/tmp/agent_output.py"), args["content"]),
     "list_dir":   lambda args: run_list_dir(args.get("path", ".")),
     "web_search": lambda args: run_web_search(args["query"], args.get("max_results", 5)),
 }
@@ -188,6 +188,8 @@ Today is {datetime.now().strftime('%Y-%m-%d')}.
 You have access to tools: bash, read_file, write_file, list_dir, web_search.
 Use tools whenever needed to complete tasks accurately.
 When running bash commands, you have full access to the server.
+IMPORTANT: write_file requires BOTH 'path' (absolute file path) AND 'content' fields — always include both.
+IMPORTANT: bash default timeout is 60s — for long scripts use timeout: 120.
 Be concise and focused. Complete the task, then give a clear final answer."""
 
 def chat(messages, model=MODEL):
@@ -198,7 +200,7 @@ def chat(messages, model=MODEL):
         "stream": False,
         "options": {"temperature": 0.3}
     }
-    r = requests.post(OLLAMA_URL, json=payload, timeout=300)
+    r = requests.post(OLLAMA_URL, json=payload, timeout=600)
     r.raise_for_status()
     return r.json()["message"]
 
@@ -226,12 +228,25 @@ def run_agent(task, model=MODEL, verbose=True):
         msg = chat(messages, model=model)
         messages.append(msg)
 
-        # No tool calls — final answer
+        # No tool calls — check if content contains a text-format tool call (llama4 fallback)
         if not msg.get("tool_calls"):
-            answer = msg.get("content", "").strip()
-            if verbose:
-                print(f"\n🤖 {model_label}: {answer}")
-            return answer
+            content = msg.get("content", "").strip()
+            parsed_text_call = None
+            try:
+                obj = json.loads(content)
+                if isinstance(obj, dict) and "name" in obj and "parameters" in obj:
+                    parsed_text_call = [{"function": {"name": obj["name"], "arguments": obj["parameters"]}}]
+            except Exception:
+                pass
+            if parsed_text_call:
+                if verbose:
+                    print(f"\n🔧 (text-format tool call detected, executing...)")
+                msg = dict(msg)
+                msg["tool_calls"] = parsed_text_call
+            else:
+                if verbose:
+                    print(f"\n🤖 {model_label}: {content}")
+                return content
 
         # Execute each tool call
         for call in msg["tool_calls"]:
@@ -245,7 +260,10 @@ def run_agent(task, model=MODEL, verbose=True):
 
             executor = EXECUTORS.get(fn_name)
             if executor:
-                result = executor(fn_args)
+                try:
+                    result = executor(fn_args)
+                except (KeyError, TypeError) as e:
+                    result = f"Tool call error: {e}. Args received: {fn_args}. Please retry with all required fields."
             else:
                 result = f"Unknown tool: {fn_name}"
 
