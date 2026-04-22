@@ -15,7 +15,7 @@ MODEL      = "llama4"
 MAX_TURNS  = 20   # max tool call rounds before giving up
 
 # Fallback chain: try each model in order
-MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b", "deepseek-r1:14b"]
+MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b", "deepseek-r1:14b", "gpt-oss:20b"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
