@@ -279,9 +279,46 @@ def run_agent(task, model=MODEL, verbose=True):
 
     return "FAILED: Max turns reached"
 
+ROUTE_MAP = {
+    "simple":    "phi4",       # bash ops, quick lookups, file reads
+    "financial": "qwen3:14b",  # P&L, strategy, structured reasoning
+    "creative":  "gemma4",     # copy writing, summaries, NLP rewrites
+    "complex":   "llama4",     # multi-step planning, synthesis, research
+}
+
+def route_task(task: str, verbose=True) -> str:
+    """Use phi4 to classify the task, return the best model name."""
+    prompt = (
+        "Classify this task into exactly one word: simple | financial | creative | complex\n"
+        "simple = bash commands, file ops, quick lookups\n"
+        "financial = stock/crypto analysis, P&L, accounting\n"
+        "creative = writing copy, summaries, descriptions\n"
+        "complex = multi-step research, planning, synthesis across many sources\n"
+        f"Task: {task[:300]}\nAnswer (one word only):"
+    )
+    try:
+        r = requests.post(OLLAMA_URL, json={
+            "model": "phi4",
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "options": {"temperature": 0.0, "num_predict": 5}
+        }, timeout=30)
+        category = r.json()["message"]["content"].strip().lower().split()[0]
+        model = ROUTE_MAP.get(category, "phi4")
+        if verbose:
+            print(f"\n🔀 Task classified as '{category}' → routed to {model}")
+        return model
+    except Exception:
+        return "phi4"  # safe default
+
 def run_chain(task, verbose=True):
-    """Try each model in MODEL_CHAIN. Return first good answer, else signal Claude fallback."""
-    for model in MODEL_CHAIN:
+    """Smart route: classify task first, send to best model. Fall back linearly if needed."""
+    routed_model = route_task(task, verbose=verbose)
+
+    # Try routed model first
+    ordered = [routed_model] + [m for m in MODEL_CHAIN if m != routed_model]
+
+    for model in ordered:
         label = model.split(":")[0].capitalize()
         if verbose:
             print(f"\n{'='*50}")
@@ -296,7 +333,6 @@ def run_chain(task, verbose=True):
         except Exception as e:
             if verbose:
                 print(f"\n❌ {label} error: {e} — trying next model...")
-    # All local models failed
     return None, None
 
 # ── Entry point ───────────────────────────────────────────────────────────────
