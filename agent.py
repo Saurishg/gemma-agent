@@ -15,7 +15,7 @@ MODEL      = "llama4"
 MAX_TURNS  = 20   # max tool call rounds before giving up
 
 # Fallback chain: try each model in order
-MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b"]
+MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b", "deepseek-r1:14b"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -280,19 +280,21 @@ def run_agent(task, model=MODEL, verbose=True):
     return "FAILED: Max turns reached"
 
 ROUTE_MAP = {
-    "simple":    "phi4",       # bash ops, quick lookups, file reads
-    "financial": "qwen3:14b",  # P&L, strategy, structured reasoning
-    "creative":  "gemma4",     # copy writing, summaries, NLP rewrites
-    "complex":   "llama4",     # multi-step planning, synthesis, research
+    "simple":    "phi4",            # bash ops, quick lookups, file reads
+    "financial": "qwen3:14b",       # P&L, strategy, structured reasoning
+    "creative":  "gemma4",          # copy writing, summaries, NLP rewrites
+    "complex":   "llama4",          # multi-step planning, synthesis, research
+    "reasoning": "deepseek-r1:14b", # math, logic, step-by-step problem solving
 }
 
 def route_task(task: str, verbose=True) -> str:
     """Use phi4 to classify the task, return the best model name."""
     prompt = (
-        "Classify this task into exactly one word: simple | financial | creative | complex\n"
+        "Classify this task into exactly one word: simple | financial | creative | complex | reasoning\n"
         "simple = bash commands, file ops, quick lookups\n"
         "financial = stock/crypto analysis, P&L, accounting\n"
         "creative = writing copy, summaries, descriptions\n"
+        "reasoning = math, logic, debugging, step-by-step problem solving\n"
         "complex = multi-step research, planning, synthesis across many sources\n"
         f"Task: {task[:300]}\nAnswer (one word only):"
     )
