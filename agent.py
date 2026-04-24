@@ -6,7 +6,8 @@ Usage: python3 agent.py "your task here"
        python3 agent.py --model phi4 "your task here"
        python3 agent.py   (interactive mode)
 """
-import os, sys, json, subprocess, re, requests
+import os, sys, json, subprocess, re, requests, warnings
+warnings.filterwarnings("ignore")
 from pathlib import Path
 from datetime import datetime
 
@@ -97,7 +98,17 @@ TOOLS = [
 
 # ── Tool executors ────────────────────────────────────────────────────────────
 
+DANGEROUS_PATTERNS = [
+    "rm -rf /", "rm -rf /*", "rm -rf ~", "rm -rf $HOME",
+    ":(){:|:&};:", "dd if=/dev/zero", "mkfs.",
+    "> /dev/sda", "chmod -R 000 /", "chown -R",
+]
+
 def run_bash(command, timeout=30):
+    low = command.strip().lower()
+    for pat in DANGEROUS_PATTERNS:
+        if pat in low:
+            return f"BLOCKED: dangerous pattern '{pat}' detected. Command refused."
     try:
         result = subprocess.run(
             command, shell=True, capture_output=True, text=True,
@@ -201,7 +212,13 @@ def chat(messages, model=MODEL):
         "options": {"temperature": 0.3}
     }
     r = requests.post(OLLAMA_URL, json=payload, timeout=600)
-    r.raise_for_status()
+    if r.status_code in (400, 500):
+        # model doesn't support tools — retry without them
+        payload.pop("tools", None)
+        r = requests.post(OLLAMA_URL, json=payload, timeout=600)
+    if not r.ok:
+        print(f"Ollama error {r.status_code}: {r.text[:300]}")
+        r.raise_for_status()
     return r.json()["message"]
 
 FAIL_PHRASES = ["max turns reached", "unable to", "cannot complete", "i don't have access",
