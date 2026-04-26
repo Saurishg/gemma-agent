@@ -163,26 +163,36 @@ def run_list_dir(path="."):
 
 def run_web_search(query, max_results=5):
     try:
-        # DuckDuckGo instant answer API
-        params = {"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"}
-        r = requests.get("https://api.duckduckgo.com/", params=params, timeout=10)
+        # Local SearXNG instance — better results than DuckDuckGo instant API
+        params = {"q": query, "format": "json", "language": "en", "safesearch": "0"}
+        r = requests.get("http://localhost:8888/search", params=params, timeout=15)
         data = r.json()
 
         results = []
-        # Abstract (direct answer)
-        if data.get("AbstractText"):
-            results.append(f"[Answer] {data['AbstractText']}")
-        # Related topics
-        for topic in data.get("RelatedTopics", [])[:int(max_results)]:
-            if isinstance(topic, dict) and topic.get("Text"):
-                url = topic.get("FirstURL", "")
-                results.append(f"• {topic['Text']}\n  {url}")
+        for item in data.get("results", [])[:int(max_results)]:
+            title = item.get("title", "")
+            url   = item.get("url", "")
+            snip  = item.get("content", "")
+            results.append(f"• {title}\n  {url}\n  {snip}")
 
         if not results:
             return f"No results found for: {query}"
         return "\n\n".join(results)
     except Exception as e:
-        return f"Search error: {e}"
+        # Fall back to DuckDuckGo if SearXNG is down
+        try:
+            params = {"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"}
+            r = requests.get("https://api.duckduckgo.com/", params=params, timeout=10)
+            data = r.json()
+            results = []
+            if data.get("AbstractText"):
+                results.append(f"[Answer] {data['AbstractText']}")
+            for topic in data.get("RelatedTopics", [])[:int(max_results)]:
+                if isinstance(topic, dict) and topic.get("Text"):
+                    results.append(f"• {topic['Text']}\n  {topic.get('FirstURL', '')}")
+            return "\n\n".join(results) if results else f"No results found for: {query}"
+        except Exception as e2:
+            return f"Search error: {e2}"
 
 EXECUTORS = {
     "bash":       lambda args: run_bash(args["command"], args.get("timeout", 60)),
@@ -375,7 +385,7 @@ if __name__ == "__main__":
             if answer is None:
                 print("\n⚠ All local models failed — hand off to Claude.")
     else:
-        print("🤖 Local AI Agent (Gemma → Qwen → Claude) — type 'exit' to quit\n")
+        print("🤖 Local AI Agent (phi4 → routed model → fallback chain) — type 'exit' to quit\n")
         while True:
             try:
                 task = input("You: ").strip()
