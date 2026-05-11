@@ -204,14 +204,18 @@ EXECUTORS = {
 
 # ── Agent loop ────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = f"""You are a helpful AI assistant running on a local Ubuntu server.
-Today is {datetime.now().strftime('%Y-%m-%d')}.
-You have access to tools: bash, read_file, write_file, list_dir, web_search.
-Use tools whenever needed to complete tasks accurately.
-When running bash commands, you have full access to the server.
-IMPORTANT: write_file requires BOTH 'path' (absolute file path) AND 'content' fields — always include both.
-IMPORTANT: bash default timeout is 60s — for long scripts use timeout: 120.
-Be concise and focused. Complete the task, then give a clear final answer."""
+def _build_system_prompt() -> str:
+    """Generate system prompt with current date so long-running processes stay accurate."""
+    return (
+        "You are a helpful AI assistant running on a local Ubuntu server.\n"
+        f"Today is {datetime.now().strftime('%Y-%m-%d')}.\n"
+        "You have access to tools: bash, read_file, write_file, list_dir, web_search.\n"
+        "Use tools whenever needed to complete tasks accurately.\n"
+        "When running bash commands, you have full access to the server.\n"
+        "IMPORTANT: write_file requires BOTH 'path' (absolute file path) AND 'content' fields — always include both.\n"
+        "IMPORTANT: bash default timeout is 60s — for long scripts use timeout: 120.\n"
+        "Be concise and focused. Complete the task, then give a clear final answer."
+    )
 
 def chat(messages, model=MODEL):
     payload = {
@@ -231,20 +235,29 @@ def chat(messages, model=MODEL):
         r.raise_for_status()
     return r.json()["message"]
 
-FAIL_PHRASES = ["max turns reached", "unable to", "cannot complete", "i don't have access",
-                "i cannot", "i'm unable", "could not find", "no results found"]
+# Phrases that indicate failure anywhere in the answer
+_FAIL_PHRASES_GLOBAL = [
+    "max turns reached", "unable to", "cannot complete",
+    "i don't have access", "i cannot", "i'm unable",
+]
+# Phrases that only indicate failure when they appear at the start of the answer
+# (to avoid false positives like "I could not find any errors in your logs")
+_FAIL_PHRASES_PREFIX = ["could not find", "no results found"]
 
-def is_bad_answer(answer):
+def is_bad_answer(answer: str) -> bool:
     """Return True if the answer looks like a failure."""
     if not answer or answer.strip() == "":
         return True
     low = answer.lower()
-    return any(p in low for p in FAIL_PHRASES)
+    if any(p in low for p in _FAIL_PHRASES_GLOBAL):
+        return True
+    prefix = low[:60]
+    return any(p in prefix for p in _FAIL_PHRASES_PREFIX)
 
 def run_agent(task, model=MODEL, verbose=True):
     model_label = model.split(":")[0].capitalize()
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "system", "content": _build_system_prompt()},
         {"role": "user",   "content": task}
     ]
 
@@ -332,7 +345,11 @@ def route_task(task: str, verbose=True) -> str:
             "stream": False,
             "options": {"temperature": 0.0, "num_predict": 5}
         }, timeout=30)
-        category = r.json()["message"]["content"].strip().lower().split()[0]
+        parts = r.json()["message"]["content"].strip().lower().split()
+        if not parts:
+            print("[route_task] WARNING: phi4 returned empty classification response — defaulting to phi4")
+            return "phi4"
+        category = parts[0]
         model = ROUTE_MAP.get(category, "phi4")
         if verbose:
             print(f"\n🔀 Task classified as '{category}' → routed to {model}")
