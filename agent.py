@@ -12,11 +12,15 @@ from pathlib import Path
 from datetime import datetime
 
 OLLAMA_URL = "http://localhost:11434/api/chat"
-MODEL      = "llama4"
+MODEL      = "qwen3:30b-a3b"
 MAX_TURNS  = 20   # max tool call rounds before giving up
 
-# Fallback chain: try each model in order
-MODEL_CHAIN = ["llama4", "phi4", "gemma4", "qwen3:14b", "deepseek-r1:14b", "gpt-oss:20b"]
+# Fallback chain: try each model in order.
+# Agent tasks need tool calling — only models with the Ollama 'tools'
+# capability belong here (phi4 and deepseek-r1 are completion-only).
+# gemma4 excluded: its renderer needs a newer Ollama than 0.23 — raw-template
+# output is garbage. Re-add after upgrading Ollama.
+MODEL_CHAIN = ["qwen3:30b-a3b", "gpt-oss:20b", "mistral-small", "llama3.3"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -217,6 +221,22 @@ def _build_system_prompt() -> str:
         "Be concise and focused. Complete the task, then give a clear final answer."
     )
 
+_TOOL_CAP_CACHE = {}
+
+def model_supports_tools(model: str) -> bool:
+    """Check Ollama capabilities — models without 'tools' will hallucinate
+    tool results instead of executing them, so they must be skipped."""
+    if model in _TOOL_CAP_CACHE:
+        return _TOOL_CAP_CACHE[model]
+    try:
+        r = requests.post("http://localhost:11434/api/show",
+                          json={"model": model}, timeout=10)
+        ok = r.ok and "tools" in r.json().get("capabilities", [])
+    except Exception:
+        ok = True  # can't verify — let chat() handle it
+    _TOOL_CAP_CACHE[model] = ok
+    return ok
+
 def chat(messages, model=MODEL):
     payload = {
         "model": model,
@@ -256,6 +276,9 @@ def is_bad_answer(answer: str) -> bool:
 
 def run_agent(task, model=MODEL, verbose=True):
     model_label = model.split(":")[0].capitalize()
+    if not model_supports_tools(model) and verbose:
+        print(f"⚠ {model} has no tool-calling support — it cannot read files or "
+              f"run commands, and may invent results. Prefer: {', '.join(MODEL_CHAIN)}")
     messages = [
         {"role": "system", "content": _build_system_prompt()},
         {"role": "user",   "content": task}
@@ -320,11 +343,11 @@ def run_agent(task, model=MODEL, verbose=True):
     return "FAILED: Max turns reached"
 
 ROUTE_MAP = {
-    "simple":    "phi4",            # bash ops, quick lookups, file reads
-    "financial": "qwen3:14b",       # P&L, strategy, structured reasoning
-    "creative":  "gemma4",          # copy writing, summaries, NLP rewrites
-    "complex":   "llama4",          # multi-step planning, synthesis, research
-    "reasoning": "deepseek-r1:14b", # math, logic, step-by-step problem solving
+    "simple":    "mistral-small", # bash ops, quick lookups, file reads
+    "financial": "qwen3:30b-a3b", # P&L, strategy, structured reasoning
+    "creative":  "mistral-small", # copy writing, summaries (gemma4 broken on Ollama 0.23)
+    "complex":   "gpt-oss:20b",   # multi-step planning, synthesis, research
+    "reasoning": "qwen3:30b-a3b", # math, logic, step-by-step problem solving
 }
 
 def route_task(task: str, verbose=True) -> str:
@@ -361,8 +384,9 @@ def run_chain(task, verbose=True):
     """Smart route: classify task first, send to best model. Fall back linearly if needed."""
     routed_model = route_task(task, verbose=verbose)
 
-    # Try routed model first
+    # Try routed model first; drop anything that can't execute tools
     ordered = [routed_model] + [m for m in MODEL_CHAIN if m != routed_model]
+    ordered = [m for m in ordered if model_supports_tools(m)]
 
     for model in ordered:
         label = model.split(":")[0].capitalize()
