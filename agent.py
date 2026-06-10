@@ -18,9 +18,7 @@ MAX_TURNS  = 20   # max tool call rounds before giving up
 # Fallback chain: try each model in order.
 # Agent tasks need tool calling — only models with the Ollama 'tools'
 # capability belong here (phi4 and deepseek-r1 are completion-only).
-# gemma4 excluded: its renderer needs a newer Ollama than 0.23 — raw-template
-# output is garbage. Re-add after upgrading Ollama.
-MODEL_CHAIN = ["qwen3:30b-a3b", "gpt-oss:20b", "mistral-small", "llama3.3"]
+MODEL_CHAIN = ["qwen3:30b-a3b", "gpt-oss:20b", "gemma4", "mistral-small", "llama3.3"]
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -343,9 +341,9 @@ def run_agent(task, model=MODEL, verbose=True):
     return "FAILED: Max turns reached"
 
 ROUTE_MAP = {
-    "simple":    "mistral-small", # bash ops, quick lookups, file reads
+    "simple":    "gemma4",        # bash ops, quick lookups, file reads
     "financial": "qwen3:30b-a3b", # P&L, strategy, structured reasoning
-    "creative":  "mistral-small", # copy writing, summaries (gemma4 broken on Ollama 0.23)
+    "creative":  "gemma4",        # copy writing, summaries, NLP rewrites
     "complex":   "gpt-oss:20b",   # multi-step planning, synthesis, research
     "reasoning": "qwen3:30b-a3b", # math, logic, step-by-step problem solving
 }
